@@ -10,8 +10,6 @@
 - Run the "main.py" script, and either copy/paste the reddit post link, or click enter to use the ones in the "links.txt file"
 - After a few minutes, the final video will be created in the "finalVid" folder.
 
-After the script has run ()
-
 ## Features:
 - Works for any post from any subreddit, where its a selftext, link, image, and video post.
 - If its a image or video post, will display the content in the final video.
