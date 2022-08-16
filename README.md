@@ -1,7 +1,7 @@
 # Video-Creation-Tool
 ### Written by Navraj Eari
 
-- Creates a 60s video from a reddit post. With Text-To-Speech (TTS), dictates the title, selftext, and comments + replies to compile a short video with background gameplay and music for entertainment.
+- Creates a 60s video from a reddit post via Web Scraping. With Text-To-Speech (TTS), dictates the title, selftext, and comments + replies to compile a short video with background gameplay and music for entertainment.
 
 ## How to use:
 - Download the required libraies.
