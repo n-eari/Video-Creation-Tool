@@ -21,6 +21,7 @@ After the script has run ()
 - Abilty to filter words from dictation, and replacing them with other words.
 - Can use your own custom background music and gameplay. Simply place them in the "music" and "backgroundVid" folder respectfully, and the script will choose one at random.
 - Final video is 720 x 1280 and 60s long. However the length can vary depending on how long the selftext is.
+- Also creates a supplementive .txt file, which contains information abou the video, such as the link author, and tags to use for social media. 
 
 ## Examples:
 https://user-images.githubusercontent.com/102254245/184902050-8ff216d4-4145-4588-b503-4702542a3e94.mp4
