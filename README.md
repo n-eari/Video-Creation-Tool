@@ -2,7 +2,15 @@
 ### Written by Navraj Eari
 
 - Creates a 60s video from a reddit post. With Text-To-Speech (TTS), dictates the title, selftext, and comments + replies to compile a short video with background gameplay and music for entertainment.
-- To use, run the "main.py" file, and ensure that you have a link to the reddit post you want to scrape. Also ensure you have a .mp4 and .mp3 in the "backgroundVid" and "music" folder respectfully. After the script has run ()
+
+## How to use:
+- Download the required libraies.
+- The "client_secrets.json" file has not been provided for obvious reasons, hence you must create it youself. [Follow guide here.](https://www.geeksforgeeks.org/how-to-get-client_id-and-client_secret-for-python-reddit-api-registration/)
+- Ensure you have a .mp4 and .mp3 in the "backgroundVid" and "music" folder respectfully, aswell as the link for the reddit post you want to scrape.
+- Run the "main.py" script, and either copy/paste the reddit post link, or click enter to use the ones in the "links.txt file"
+- After a few minutes, the final video will be created in the "finalVid" folder.
+
+After the script has run ()
 
 ## Features:
 - Works for any post from any subreddit, where its a selftext, link, image, and video post.
