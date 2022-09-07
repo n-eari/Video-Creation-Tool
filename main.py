@@ -11,8 +11,11 @@ from selenium.webdriver.common.by import By
 from moviepy.editor import *
 from moviepy.video.fx.all import crop
 from RedDownloader import RedDownloader
-from PIL import Image, ImageDraw
+from PIL import Image, ImageDraw, ImageFilter
 from subprocess import check_output
+from mutagen.mp3 import MP3
+import pytesseract
+pytesseract.pytesseract.tesseract_cmd = 'C:\Program Files\Tesseract-OCR\\tesseract.exe'
 
 options = webdriver.EdgeOptions()
 options.headless = True
@@ -26,8 +29,8 @@ credentials = 'client_secrets.json'
 with open(credentials) as f:
     creds = json.load(f)
     reddit = praw.Reddit(client_id=creds['client_id'], client_secret=creds['client_secret'], user_agent=creds['user_agent'],
-                        redirect_uri=creds['redirect_uri'], refresh_token=creds['refresh_token'], username=creds['username'],
-                        password=creds['password']) # reddit credentials to use praw
+                         redirect_uri=creds['redirect_uri'], refresh_token=creds['refresh_token'], username=creds['username'],
+                         password=creds['password']) # reddit credentials to use praw
     f.close()
 
 def getSubmissions(): # prepares reddit post for further work
@@ -45,8 +48,8 @@ def getSubmissions(): # prepares reddit post for further work
             f.write(str(submission.title) + "\n")
             f.write("https://www.reddit.com" + str(submission.permalink) + "\n")
             f.write("post by u/" + str((submission.author).name) + "\n")
-            f.write("#reddit #askreddit #fyp #foryoupage #reddit_tiktok #redditreadings #redditstories #aita" + "\n")
-            f.write("#reddit, #askreddit, #fyp, #foryoupage, #reddit_tiktok, #redditreadings, #redditstories, #aita" + "\n")
+            f.write("#reddit #askreddit #fyp #foryoupage #redditreadings #redditstories #aita #tifu" + "\n")
+            f.write("#reddit, #askreddit, #fyp, #foryoupage, #redditreadings, #redditstories, #aita, #tifu" + "\n")
             f.close()
             # writes submission info into a .txt for later viewing
 
@@ -69,8 +72,8 @@ def getSubmissions(): # prepares reddit post for further work
             f.write(str(submission.title) + "\n")
             f.write("https://www.reddit.com" + str(submission.permalink) + "\n")
             f.write("post by u/" + str((submission.author).name) + "\n")
-            f.write("#reddit #askreddit #fyp #foryoupage #reddit_tiktok #redditreadings #redditstories #aita" + "\n")
-            f.write("#reddit, #askreddit, #fyp, #foryoupage, #reddit_tiktok, #redditreadings, #redditstories, #aita" + "\n")
+            f.write("#reddit #askreddit #fyp #foryoupage #redditreadings #redditstories #aita #tifu" + "\n")
+            f.write("#reddit, #askreddit, #fyp, #foryoupage, #redditreadings, #redditstories, #aita, #tifu" + "\n")
             f.close()
         
     finally:
@@ -85,7 +88,10 @@ def textCleaner(text): # cleans the selftext for special chars, acryonyms, and p
                "MIL": "mother-in-law"}
     profan2 = {"tf":"the hell", "ass":"butt", "cum":"liquids"}
     profan3 = {"fuck":"f", "bitch":"dog", "cunt":"cow", "asshole":"a-hole", "rape":"defile", "dick":"schlong",
-               "wtf": "what the hell", "porn":"pork", "rapist":"criminal", "masturbate": "got off", "slut":"sloth"}
+               "wtf":"what the hell", "porn":"pork", "rapist":"criminal", "masturbate":"got off", "slut":"sloth",
+               "suicide":"death", "bastard":"dog", "pussy":"wussy", "sex":"bonk", "horny":"bonky", "foreplay":"touching",
+               "shit":"dam", "fingering":"touching", "raping":"defiling", "spank":"clap", "masturbating":"jerking",
+               "wank":"jerk"}
 
     for word, replacement in profan1.items():
         text = re.sub(word, replacement, text)
@@ -114,115 +120,28 @@ def imageOpt(img): # optimises the image. inreases width to 600
     wpercent = (basewidth / float(img.size[0]))
     hsize = int((float(img.size[1]) * float(wpercent)))
     img = img.resize((basewidth, hsize), Image.ANTIALIAS)
+    img = img.filter(ImageFilter.SHARPEN)
     return img
 
-def getPageImage(submission): # prepares our post for a screenshot
-    bodyCounter = 0
-    link = "https://www.reddit.com" + submission.permalink
-    submissionID = re.search('(?<=comments/)(\w+)', link).group(1)
-    driver.get(link) # loads page into webdriver for further work
-    driver.find_element_by_xpath('//*[@id="SHORTCUT_FOCUSABLE_DIV"]/div[3]/div[1]/section/div/section/section/form[2]/button').click()
-
-    if driver.find_elements_by_class_name('gCpM4Pkvf_Xth42z4uIrQ'):
-        driver.find_element_by_class_name('gCpM4Pkvf_Xth42z4uIrQ').click()
-        # if the page has a SPOILER button, it will press it so the post can be seen
-    if driver.find_elements_by_xpath('//*[@id="AppRouter-main-content"]/div/div[1]/div/div/div[2]/button'):
-        driver.find_element_by_xpath('//*[@id="AppRouter-main-content"]/div/div[1]/div/div/div[2]/button').click()
-        driver.find_element_by_class_name('gCpM4Pkvf_Xth42z4uIrQ').click()
-        # if the page is NSFW, will click buttons to allow viewing
-        
-    S = lambda X: driver.execute_script('return document.body.parentNode.scroll'+X)
-    driver.set_window_size(420, S('Height')) # May need manual adjustment                                                                                                         
-    # logic to just page size
-
-    if hasattr(submission, 'post_hint'):
-        if submission.post_hint == 'hosted:video':
-            command = tts.format(textCleaner(submission.title), ".audio/" + "0" + ".mp3")
-            os.system(command)                                                                                                 
-            driver.find_element(By.CLASS_NAME, '_eYtD2XCVieq6emjKBH3m').screenshot(".image\\0.png")
-            im = imageOpt(Image.open(".image\\0.png"))
-            add_corners(im, rad = 10).save(".image\\0.png")
-            RedDownloader.Download(url = link, quality = 360, destination = "")
-            bodyCounter += 1
-            return bodyCounter
-            # if post is a video, will only dictate and ss the title, and also downloads vid for later
-
-        elif submission.post_hint == 'image':
-            command = tts.format(textCleaner(submission.title), ".audio/" + "0" + ".mp3")
-            os.system(command)                                                                                                   
-            driver.find_element(By.CLASS_NAME, '_eYtD2XCVieq6emjKBH3m').screenshot(".image\\0.png")
-            im = imageOpt(Image.open(".image\\0.png"))
-            add_corners(im, rad = 10).save(".image\\0.png")
-            RedDownloader.Download(url = link, quality = 360, destination = "")
-            bodyCounter += 1
-            return bodyCounter
-            # if post is an image, will only dictate and ss the title, and also downloads image for later
-
-        elif submission.post_hint == 'link':
-            command = tts.format(textCleaner(submission.title), ".audio/" + "0" + ".mp3")
-            os.system(command)                                                                                                   
-            driver.find_element(By.ID, 't3_' + submissionID).screenshot(".image\\0.png")
-            im = imageOpt(Image.open(".image\\0.png"))
-            add_corners(im, rad = 30).save(".image\\0.png")
-            bodyCounter += 1
-            return bodyCounter
-            # if post is a link post, only dicatate title
-        
-    elif re.match("https://www.youtube.com/\S+", submission.url):
-        command = tts.format(textCleaner(submission.title), ".audio/" + "0" + ".mp3")
-        os.system(command)                                                                                                   
-        driver.find_element(By.CLASS_NAME, '_eYtD2XCVieq6emjKBH3m').screenshot(".image\\0.png")
-        im = imageOpt(Image.open(".image\\0.png"))
-        add_corners(im, rad = 10).save(".image\\0.png")
-        YouTube(submission.url).streams.get_by_resolution("360p").download(filename = "downloaded.mp4")
-        bodyCounter += 1
-        return bodyCounter
-        # if post is a youtube link, download video, and only ss and dictate title
-
-    else: # selftext post
-        if driver.find_elements_by_xpath("//div[@class='_3xX726aBn29LDbsDtzr_6E _1Ap4F5maDtT1E1YuCiaO0r D3IL3FD0RFy_mkKLPwL4']//p[@class='_1qeIAgB0cPwnLhDF9XSiJM']"):
-            # saves an audio file of the title and selftext, sepearted per paragraph
-            command = tts.format(textCleaner(submission.title), ".audio/" + "0" + ".mp3")
-            os.system(command)                                                                                                 
-            driver.find_element(By.CLASS_NAME, '_eYtD2XCVieq6emjKBH3m').screenshot(".image\\0.png")
-            im = imageOpt(Image.open(".image\\0.png"))
-            add_corners(im, rad = 10).save(".image\\0.png")
-            bodyCounter += 1
-
-            for para in driver.find_elements_by_xpath("//div[@class='_3xX726aBn29LDbsDtzr_6E _1Ap4F5maDtT1E1YuCiaO0r D3IL3FD0RFy_mkKLPwL4']//p[@class='_1qeIAgB0cPwnLhDF9XSiJM']"):
-                command = tts.format(textCleaner(para.text), ".audio/" + str(bodyCounter) + ".mp3")
-                os.system(command)  
-                para.screenshot(".image\\" + str(bodyCounter) + ".png")
-                im = imageOpt(Image.open(".image\\" + str(bodyCounter) + ".png"))
-                add_corners(im, rad = 10).save(".image\\" + str(bodyCounter) + ".png")
-                bodyCounter += 1
-            return bodyCounter
-
-        else: # this sub doesnt have a selftext, so we will get a good looking title element
-            command = tts.format(textCleaner(submission.title), ".audio/" + "0" + ".mp3")
-            os.system(command)
-            driver.find_element(By.ID, 't3_' + submissionID).screenshot(".image\\0.png")
-            im = imageOpt(Image.open(".image\\0.png"))
-            add_corners(im, rad = 30).save(".image\\0.png")
-            bodyCounter += 1
-            return bodyCounter
-        
-def getComments(submission): # gets comments from submission, if its <= 1000 characters
-    allComments = {}
-    parent = 10 # 10 parent comments will be used
-    child = 1 # if parent has a child, will get first child
-    chars = 600 # will only get comments which are <= 600 words for space issues
-
-    submission.comments.replace_more() # this takes alot of time
-    for comment in ([comment for comment in list(submission.comments) if (comment.stickied == False) & (len(textCleaner(comment.body)) <= chars)])[:parent]: # first [10] parent comments
-        allComments.update({comment: 1}) # value 1 is parent
-
-        if len(list(comment.replies)) > 0: # if the parent comment has children
-            for comment1 in ([comment for comment in list(comment.replies) if len(textCleaner(comment.body)) <= chars])[:child]: # for each child comment, up till [1] children...
-                allComments.update({comment1: 2}) # value 2 is child
-
-    return allComments 
-    # a dictionary, with the key as the comment object, and value as 1 or 2. 1 is parent, 2 is child
+def imFilter(im): # censors profanity words in the image itself
+    profan1 = ["fuck", "bitch", "cunt", "rape", "dick", "porn", "rapist", "masturbate", "slut", "suicide",
+               "bastard", "pussy", "sex", "horny", "foreplay", "shit", "fingering", "raping", "spank",
+               "masturbat", "wank"]
+    profan2 = ["ass", "asshole", "cum", "cumming"]
+    data = pytesseract.image_to_data(im, output_type='dict')
+    boxes = len(data['level'])
+    for i in range(boxes):
+        for word in profan1:
+            if word in re.sub('\W', '', data['text'][i], flags=re.IGNORECASE):
+                (x, y, w, h) = (data['left'][i], data['top'][i], data['width'][i], data['height'][i])
+                draw = ImageDraw.Draw(im)
+                draw.line((x, y + (h/2), x + w, y + (h/2)), fill = "black", width = round(h/3))
+        for word in profan2:
+            if re.sub('\W', '', data['text'][i], flags=re.IGNORECASE) == word:
+                (x, y, w, h) = (data['left'][i], data['top'][i], data['width'][i], data['height'][i])
+                draw = ImageDraw.Draw(im)
+                draw.line((x, y + (h/2), x + w, y + (h/2)), fill = "black", width = round(h/3))
+    return im
 
 def add_margin(pil_img, top, right, bottom, left, color):
     width, height = pil_img.size
@@ -230,7 +149,7 @@ def add_margin(pil_img, top, right, bottom, left, color):
     new_height = height + top + bottom
     result = Image.new(pil_img.mode, (new_width, new_height), color)
     result.paste(pil_img, (left, top))
-    return result # function to add left margin to child image
+    return result # function to add margins to images
 
 def get_concat_v_resize(im1, im2, resample=Image.BICUBIC, resize_big_image=True):
     if im1.width == im2.width:
@@ -248,63 +167,198 @@ def get_concat_v_resize(im1, im2, resample=Image.BICUBIC, resize_big_image=True)
     dst.paste(_im2, (0, _im1.height))
     return dst # function to stitch 2 images vertically
 
-def generateMedia(comments, bodyCounter): # for each comment in the list, get the link, body, screenshot and audio
-    objectNames = list(str(i) for i in range(bodyCounter))
-    no = bodyCounter
-    parent = bodyCounter - 1
-    for comment, type in comments.items():
+def audioLength(name): # gets the length of an audio file
+    audio_info = MP3(".audio\\" + str(name) + ".mp3").info    
+    return int(audio_info.length)
 
-        if type == 1: # if its a parent comment, take a ss
-            commentlink = "https://www.reddit.com" + comment.permalink
-            URL = commentlink
-            driver.get(URL)
-            S = lambda X: driver.execute_script('return document.body.parentNode.scroll'+X)
-            driver.set_window_size(420, S('Height')) # May need manual adjustment
-            driver.find_element(By.XPATH, '//*[@id="t1_{}"]/div[2]'.format(comment.id)).screenshot(".image\\"+ str(no) + ".png")
+def getPageImage(submission): # prepares our post for a screenshot
+    clock = 0 # sum of audio file times
+    bodyCounter = 0 # number of images
+    objectNames = [str(0)] # a list with the number of images
+    link = "https://www.reddit.com" + submission.permalink
+    submissionID = re.search('(?<=comments/)(\w+)', link).group(1)
+    driver.get(link) # loads page into webdriver for further work
+    driver.find_element_by_xpath('//*[@id="SHORTCUT_FOCUSABLE_DIV"]/div[3]/div[1]/section/div/section/section/form[2]/button').click()
 
-            try: # if this parent comment has no child, do the processing now
-                if list(comments.values())[no] == 1: 
-                    im1 = Image.open(".image\\"+ str(no) + ".png")
-                    im1 = imageOpt(im1)
-                    add_corners(im1, rad = 30).save(".image\\"+ str(no) + ".png")
-            except Exception:
-                    im1 = Image.open(".image\\"+ str(no) + ".png")
-                    im1 = imageOpt(im1)
-                    add_corners(im1, rad = 30).save(".image\\"+ str(no) + ".png")
+    def easySS(): # a few posts of diff types ss the same elements, so this function makes it simplier to do
+        driver.find_element(By.CLASS_NAME, '_eYtD2XCVieq6emjKBH3m').screenshot(".image\\0.png")
+        driver.find_element(By.CLASS_NAME, 'cZPZhMe-UCZ8htPodMyJ5').screenshot(".image\\temp1.png")
+        driver.find_element(By.CLASS_NAME, '_1hwEKkB_38tIoal6fcdrt9').screenshot(".image\\temp2.png")
+        im1 = add_margin(Image.open(".image\\0.png"), 0, 20, 0, 20, (255,255,255))
+        im1 = imageOpt(im1)
+        im2 = add_margin(Image.open(".image\\temp1.png"), 10, 20, 10, 20, (255,255,255))
+        im2 = imageOpt(im2)
+        im3 = add_margin(Image.open(".image\\temp2.png"), 0, 20, 10, 10, (255,255,255))
+        im3 = imageOpt(im3)
+        im = get_concat_v_resize(im2, im1, resize_big_image = True)
+        im = get_concat_v_resize(im, im3, resize_big_image = True)
+        im = imFilter(im)
+        add_corners(im, rad = 30).save(".image\\0.png")
+        os.remove(".image\\temp1.png")
+        os.remove(".image\\temp2.png")
 
-        elif type == 2: # if its a child comment, stich it vertically with the parent comment
-            commentlink = "https://www.reddit.com" + comment.permalink
-            URL = commentlink
-            driver.get(URL)
-            S = lambda X: driver.execute_script('return document.body.parentNode.scroll'+X)
-            driver.set_window_size(420, S('Height')) # May need manual adjustment
-            driver.find_element(By.XPATH, '//*[@id="t1_{}"]/div[2]'.format(comment.id)).screenshot(".image\\"+ str(no) + ".png")
-
-            im1 = Image.open(".image\\"+ str(parent) + ".png")
-            im1 = imageOpt(im1)
-            im2 = Image.open(".image\\"+ str(no) + ".png")
-            im2 = imageOpt(im2)
-            im2 = add_margin(im2, 0, 0, 0, 25, (245, 246, 246))
-            
-            im = get_concat_v_resize(im1, im2, resize_big_image=True)
-            add_corners(im, rad = 30).save(".image\\"+ str(no) + ".png")
-            add_corners(im1, rad = 30).save(".image\\"+ str(parent) + ".png") # for logic reasons, round of the parent here, and not above
+    if driver.find_elements_by_class_name('gCpM4Pkvf_Xth42z4uIrQ'):
+        driver.find_element_by_class_name('gCpM4Pkvf_Xth42z4uIrQ').click()
+        # if the page has a SPOILER button, it will press it so the post can be seen
+    if driver.find_elements_by_xpath('//*[@id="AppRouter-main-content"]/div/div[1]/div/div/div[2]/button'):
+        driver.find_element_by_xpath('//*[@id="AppRouter-main-content"]/div/div[1]/div/div/div[2]/button').click()
+        driver.find_element_by_class_name('gCpM4Pkvf_Xth42z4uIrQ').click()
+        # if the page is NSFW, will click buttons to allow viewing
         
-        parent += 1
+    S = lambda X: driver.execute_script('return document.body.parentNode.scroll'+X)
+    driver.set_window_size(390, S('Height')) # May need manual adjustment                                                                                                         
+    # logic to just page size
+
+    if hasattr(submission, 'post_hint'):
+        if submission.post_hint == 'hosted:video':
+            command = tts.format(textCleaner(submission.title), ".audio/" + "0" + ".mp3")
+            os.system(command)   
+            clock += audioLength(bodyCounter)                                                                                           
+            easySS()
+            RedDownloader.Download(url = link, quality = 360, destination = "")
+            # if post is a video, will only dictate and ss the title, and also downloads vid for later
+
+        elif submission.post_hint == 'image':
+            command = tts.format(textCleaner(submission.title), ".audio/" + "0" + ".mp3")
+            os.system(command)   
+            clock += audioLength(bodyCounter)                                                                                               
+            easySS()
+            RedDownloader.Download(url = link, quality = 360, destination = "")
+            # if post is an image, will only dictate and ss the title, and also downloads image for later
+
+        elif submission.post_hint == 'link':
+            command = tts.format(textCleaner(submission.title), ".audio/" + "0" + ".mp3")
+            os.system(command)  
+            clock += audioLength(bodyCounter)                                                                                               
+            driver.find_element(By.XPATH, '//*[@id="t3_{}"]/div'.format(submissionID)).screenshot(".image\\0.png")
+            im = add_margin(Image.open(".image\\0.png"), 10, 5, 10, 5, (255,255,255))
+            im = imageOpt(im)
+            add_corners(im, rad = 30).save(".image\\0.png")
+            # if post is a link post, only dicatate title
         
-        command = tts.format(textCleaner(comment.body), ".audio/" + str(no) + ".mp3")
-        os.system(command)
-        # dictate comments
+    elif re.match("https://www.youtube.com/\S+", submission.url):
+        command = tts.format(textCleaner(submission.title), ".audio/" + "0" + ".mp3")
+        os.system(command)    
+        clock += audioLength(bodyCounter)                                                                                           
+        easySS()
+        YouTube(submission.url).streams.get_by_resolution("360p").download(filename = "downloaded.mp4")
+        # if post is a youtube link, download video, and only ss and dictate title
 
-        objectNames.append(str(no))
-        no += 1
+    else: # selftext post
+        if driver.find_elements_by_xpath("//div[@class='_3xX726aBn29LDbsDtzr_6E _1Ap4F5maDtT1E1YuCiaO0r D3IL3FD0RFy_mkKLPwL4']//p[@class='_1qeIAgB0cPwnLhDF9XSiJM']"):
+            # saves an audio file of the title and selftext, sepearted per paragraph
+            command = tts.format(textCleaner(submission.title), ".audio/" + "0" + ".mp3")
+            os.system(command)
+            clock += audioLength(bodyCounter)
+            easySS()
 
-    driver.quit() # driver no longer needed
+            def easyP(para, top, bottom): # seperate function to ss paragraph elements
+                para.screenshot(".image\\" + str(bodyCounter) + ".png")
+                im = add_margin(Image.open(".image\\" + str(bodyCounter) + ".png"), top, 20, bottom, 20, (255,255,255))
+                im = imageOpt(im)
+                im = imFilter(im)
+                add_corners(im, rad = 30).save(".image\\" + str(bodyCounter) + ".png")
 
-    return objectNames # a list with strings, each one representing the name of the media generated
-    # so "1" is the name of the file of the first comment, for the image (.png) and audio (.mp3)
+            paras =  driver.find_elements_by_xpath("//div[@class='_3xX726aBn29LDbsDtzr_6E _1Ap4F5maDtT1E1YuCiaO0r D3IL3FD0RFy_mkKLPwL4']//p[@class='_1qeIAgB0cPwnLhDF9XSiJM']")
+            for para in paras:
+                bodyCounter += 1
+                command = tts.format(textCleaner(para.text), ".audio/" + str(bodyCounter) + ".mp3")
+                os.system(command)  
+                clock += audioLength(bodyCounter)
+                if paras.index(para) == 0: # if its the 1st paragraph, add slightly diff margins
+                    easyP(para, 10, 5)
+                elif paras.index(para) == (len(paras) - 1): # if its the last paragraph, add slightly diff margins
+                    easyP(para, 0, 10)
+                else: # if a normal paragraph, add slightly diff margins
+                    easyP(para, 0, 5)
+                objectNames.append(str(bodyCounter))
 
-def movieCreator(objectNames): # for each commenet, combine .png and .mp3 into a video
+        else: # this sub doesnt have a selftext
+            command = tts.format(textCleaner(submission.title), ".audio/" + "0" + ".mp3")
+            os.system(command)
+            clock += audioLength(bodyCounter)
+            easySS()
+
+    BodyClockOb = [bodyCounter, clock, objectNames]
+    return BodyClockOb
+
+def generateMedia(comment, bodyCounter, parent, isChild): # generates audio and image for a comment object
+    commentlink = "https://www.reddit.com" + comment.permalink
+    URL = commentlink
+    driver.get(URL)
+    S = lambda X: driver.execute_script('return document.body.parentNode.scroll'+X)
+    driver.set_window_size(420, S('Height')) # May need manual adjustment
+    driver.find_element(By.XPATH, '//*[@id="t1_{}"]/div[2]'.format(comment.id)).screenshot(".image\\"+ str(bodyCounter) + ".png")
+    command = tts.format(textCleaner(comment.body), ".audio/" + str(bodyCounter) + ".mp3")
+    os.system(command)
+
+    if isChild == True: # if its a child comment
+        im1 = Image.open(".image\\" + str(parent) + ".png")
+        im1 = imageOpt(im1)
+        im2 = Image.open(".image\\" + str(bodyCounter) + ".png")
+        im2 = add_margin(im2, 0, 0, 0, 15, (245, 246, 246))
+        im2 = imageOpt(im2)
+        
+        im = get_concat_v_resize(im1, im2, resize_big_image = True)
+        im = imFilter(im)
+        add_corners(im, rad = 30).save(".image\\"+ str(bodyCounter) + ".png")
+        im1 = imFilter(im1)
+        add_corners(im1, rad = 30).save(".image\\"+ str(parent) + ".png") # for logic reasons, round of the parent here, and not above
+
+def getComments(submission, BodyClockOb): # gets comments from submission
+    chars = 600 # only comments which are <= 600 chars are used
+    clock = BodyClockOb[1]
+    objectNames = BodyClockOb[2]
+
+    if clock < 59: # if the selftext was short, then theres time to get some comments
+        bodyCounter = BodyClockOb[0]
+        long = False
+        no = 0
+        parent = bodyCounter
+        submission.comments.replace_more() # this takes alot of time
+        allComments = [comment for comment in list(submission.comments) if (comment.stickied == False) & (len(textCleaner(comment.body)) <= chars)]
+        maxCom = len(allComments)
+
+        while clock < 59:
+            if no == maxCom:
+                break
+            bodyCounter += 1
+            parent += 1
+            comment = allComments[no]
+            generateMedia(comment, bodyCounter, parent, isChild = False)
+            clock += audioLength(bodyCounter)   
+            objectNames.append(str(bodyCounter))
+            no += 1
+            if clock >= 59:
+                im1 = Image.open(".image\\" + str(parent) + ".png")
+                im1 = imageOpt(im1)
+                im1 = imFilter(im1)
+                add_corners(im1, rad = 30).save(".image\\" + str(parent) + ".png")
+                break
+
+            allReps = [comment for comment in list(comment.replies) if len(textCleaner(comment.body)) <= chars]
+            if len(allReps) > 0: # if the parent comment has children
+                bodyCounter += 1
+                comment2 = allReps[0] # for each child comment, up till [1] children...
+                generateMedia(comment2, bodyCounter, parent, isChild = True)
+                clock += audioLength(bodyCounter)   
+                parent += 1
+                objectNames.append(str(bodyCounter))
+            else:
+                im1 = Image.open(".image\\" + str(parent) + ".png")
+                im1 = imageOpt(im1)
+                im1 = imFilter(im1)
+                add_corners(im1, rad = 30).save(".image\\" + str(parent) + ".png")
+
+    else: # if selftext is long, then get no comments since we wont have time for them
+         long = True
+         
+    driver.quit()
+    ObjLong = [objectNames, long]
+    return ObjLong
+
+def movieCreator(ObjLong): # for each commenet, combine .png and .mp3 into a video
+    objectNames = ObjLong[0]
     compositeList = []
     cum = 0 # cumlative time of clips
     for name in objectNames:
@@ -320,34 +374,20 @@ def movieCreator(objectNames): # for each commenet, combine .png and .mp3 into a
 
     return compositeList # returns a lists, where each element is a video clip object
 
-def hasAudio(file_path): # checks if downloaded video has audio
-  command = ['ffprobe', '-show_streams',
-           '-print_format', 'json', file_path]
-  output = check_output(command)
-  parsed = json.loads(output)
-  streams = parsed['streams']
-  audio_streams = list(filter((lambda x: x['codec_type'] == 'audio'), streams))
-  return len(audio_streams) > 0
-
-def finalVideoTT(compositeList, submission, bodyCounter): # creates the final video for tiktok
+def finalVideoTT(compositeList, submission, ObjLong): # creates the final video for tiktok
     finalList = []
-
-    bodyCheck = [clip.duration for clip in compositeList[:bodyCounter]]
-    cumBodyCheck = sum(bodyCheck) # this checks the length of the selftext
-
-    if cumBodyCheck <= 60: # if selftext is short, just make sure enough clips are passed for 60s
-        timeList = [clip.duration for clip in compositeList]
-        cumList = (np.cumsum(timeList)).tolist()
-        cumList60 = [x for x in cumList if x <= 70]
-        compositeList60 = compositeList[:len(cumList60)] # logic which only passes enough clips for 60s
-        cum = sum(clip.duration for clip in compositeList60)
-
-    elif cumBodyCheck > 60: # if selftext is long, then only pass the clips related to the title + selftext
-        compositeList60 = compositeList[:bodyCounter]
-        cum = cumBodyCheck
-
+    timeList = [clip.duration for clip in compositeList]
+    cum = sum(timeList)
     link = "https://www.reddit.com" + submission.permalink
     submissionID = re.search('(?<=comments/)(\w+)', link).group(1)
+
+    def hasAudio(file_path): # checks if downloaded video has audio
+        command = ['ffprobe', '-show_streams', '-print_format', 'json', file_path]
+        output = check_output(command)
+        parsed = json.loads(output)
+        streams = parsed['streams']
+        audio_streams = list(filter((lambda x: x['codec_type'] == 'audio'), streams))
+        return len(audio_streams) > 0
 
     backTemp = VideoFileClip(".backgroundVid/" + random.choice(os.listdir(".backgroundVid/"))).without_audio()    
     if backTemp.duration >= cum:
@@ -364,7 +404,8 @@ def finalVideoTT(compositeList, submission, bodyCounter): # creates the final vi
         back = backCropped.resize((720,1280))
     # loads a random background clip from folder, and adjusts it for stuff
 
-    musicTemp = AudioFileClip(".music/" + random.choice(os.listdir(".music/")))
+    musicName = random.choice(os.listdir(".music/"))
+    musicTemp = AudioFileClip(".music/" + musicName)
     if musicTemp.duration >= cum:
         music = musicTemp.subclip(0, cum).volumex(0.10)
     elif musicTemp.duration < cum:
@@ -442,7 +483,7 @@ def finalVideoTT(compositeList, submission, bodyCounter): # creates the final vi
             fillerTemp = VideoFileClip(extenCheck).loop().set_duration(cum).resize(width=400).set_position(("center", 0.65), relative=True).set_opacity(0.75)
             finalList.append(fillerTemp)
 
-    for clip in compositeList60: # for each clip, adjust and time it so the next clip plays straight after, currently video clip objects
+    for clip in compositeList: # for each clip, adjust and time it so the next clip plays straight after, currently video clip objects
         clip = clip.set_position(("center",240)).set_opacity(0.85)
         if (clip.h > 800) & (clip.h < 1280):
             clip = clip.set_position(("center", "center"), relative=True)
@@ -465,20 +506,26 @@ def finalVideoTT(compositeList, submission, bodyCounter): # creates the final vi
 
         finalList.append(clip) # each video clip object is appended to a list
 
-    videoTemp = CompositeVideoClip(finalList) # compilies all video clip objects together to create final video
+    leftMargin = 23 # lines of code to add a music playing icon, aswell as credit to the persons music im using
+    watermark = VideoFileClip("musicIcon.gif", has_mask=True).resize(height=35).loop().set_start(0).set_duration(cum).margin(left=leftMargin, opacity=0).set_pos(("left", "top")).set_opacity(0.5)
+    waterText = TextClip(musicName.replace("9", '"').replace(".mp3", ""), font = "Calibri-Bold", fontsize = 25, color = 'black').margin(left=leftMargin + 40, top=9, opacity=0).set_pos(("left", "top")).set_start(0).set_duration(cum).set_opacity(0.5)
+    finalList.append(watermark)
+    finalList.append(waterText)
 
-    if (videoTemp.duration > 60) & (cumBodyCheck <= 60): # extra logic which trims the video to 60s for tiktok is the selftext is short
+    videoTemp = CompositeVideoClip(finalList) # compilies all video clip objects together to create final video
+    long = ObjLong[1]
+    
+    if (videoTemp.duration > 60) & (long == False): # extra logic which trims the video to 60s for tiktok is the selftext is short
         video = videoTemp.subclip(0, 59)
-    elif (videoTemp.duration <= 60) & (cumBodyCheck <= 60):
+    elif (videoTemp.duration <= 60) & (long == False):
         video = videoTemp.subclip(0, videoTemp.duration)
-    elif cumBodyCheck > 60: # if the selftext is long, allow it to go over 60, but no comments will be seen
+    elif long == True: # if the selftext is long, allow it to go over 60, but no comments will be seen
         video = videoTemp.subclip(0, videoTemp.duration)
 
     video.write_videofile(".finalVid/" + submissionID + "_FinalVideoTT" + ".mp4")
 
 submission = getSubmissions()
-bodyCounter = getPageImage(submission)
-comments = getComments(submission)
-objectNames = generateMedia(comments, bodyCounter)
-compositeList = movieCreator(objectNames)
-finalVideoTT(compositeList, submission, bodyCounter)
+BodyClockOb = getPageImage(submission)
+ObjLong = getComments(submission, BodyClockOb)
+compositeList = movieCreator(ObjLong)
+finalVideoTT(compositeList, submission, ObjLong)
