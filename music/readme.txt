@@ -1,1 +1,2 @@
-put your music .mp3 files here for the background
+- put your music .mp3 files here for the background
+- name of file will be shown in the top left of video, so make sure it is named appropriately
