@@ -19,10 +19,10 @@
 ## How to use:
 - Download the required libraies.
 - The "client_secrets.json" file has not been provided for obvious reasons, hence you must create it youself. [Follow guide here.](https://www.geeksforgeeks.org/how-to-get-client_id-and-client_secret-for-python-reddit-api-registration/)
-- Ensure you have a .mp4 and .mp3 in the "backgroundVid" and "music" folder respectfully, aswell as the link for the reddit post you want to scrape.
+- Ensure you have a .mp4 and .mp3 in the "backgroundVid" and "music" folder respectfully, aswell as the link for the reddit post you want to scrape. These are not provided and you must source yourself.
 - The name of the .mp3 file will be shown in the top left, so ensure it is named appropriately (name, artist). 
 - Run the "main.py" script, and either copy/paste the reddit post link, or click enter to use the ones in the "links.txt file"
-- After a few minutes, the final video will be created in the "finalVid" folder.
+- After a few minutes, the final video will be created in the "finalVid" folder. A typical 60s video is ~30mb depending on gameplay, music, and number of images used.
 
 ## Features:
 - Works for any post from any subreddit, whether its a selftext, link, image, and video post.
@@ -38,6 +38,10 @@
 - Also creates a supplementive .txt file, which contains information abou the video, such as the link author, and tags to use for social media. 
 
 ## Examples:
-https://user-images.githubusercontent.com/102254245/184902050-8ff216d4-4145-4588-b503-4702542a3e94.mp4
+https://user-images.githubusercontent.com/102254245/191510664-db17fc25-725e-46c1-abb8-2b43e4a022bf.mp4
 
-https://user-images.githubusercontent.com/102254245/184902301-c23ead63-fbc6-4f1c-a113-cd59162a376a.mp4
+https://user-images.githubusercontent.com/102254245/191523008-5771e23a-2a66-4d3e-9f1a-028c60f0a8d0.mp4
+
+
+
+
