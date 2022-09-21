@@ -31,7 +31,7 @@
 - Script will automatically get enough comments and replies (max 1 reply per parent) to fufil a 60s video.
 - If the selftext is > 60s, allow for the video to be this long, but gets no comments
 - Uses Edge TTS. change TTS voice, speed, volume and pitch. [Learn more here.](https://github.com/rany2/edge-tts)
-- Abilty to filter words from dictation, and replacing them with other words.
+- Abilty to filter and censor words from dictation and image itself, and replacing them with other words.
 - Can use your own custom background music and gameplay. Simply place them in the "music" and "backgroundVid" folder respectfully, and the script will choose one at random.
 - Final video is 720 x 1280 and 60s long. However the length can vary depending on how long the selftext is.
 - Added watermark in the top left to give credit to whose background music you are using by simply using the name of the music file.
