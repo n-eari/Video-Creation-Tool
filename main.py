@@ -178,6 +178,7 @@ def getPageImage(submission): # prepares our post for a screenshot
     clock = 0 # sum of audio file times
     bodyCounter = 0 # number of images
     objectNames = [str(0)] # a list with the number of images
+    postType = "text" # variable which tells us what type our post is (video, image, or text)
     link = "https://www.reddit.com" + submission.permalink
     submissionID = re.search('(?<=comments/)(\w+)', link).group(1)
     driver.get(link) # loads page into webdriver for further work
@@ -214,6 +215,7 @@ def getPageImage(submission): # prepares our post for a screenshot
 
     if hasattr(submission, 'post_hint'):
         if submission.post_hint == 'hosted:video':
+            postType = "video"
             command = tts.format(textCleaner(submission.title), "audio/" + "0" + ".mp3")
             os.system(command)   
             clock += audioLength(bodyCounter)                                                                                           
@@ -222,6 +224,7 @@ def getPageImage(submission): # prepares our post for a screenshot
             # if post is a video, will only dictate and ss the title, and also downloads vid for later
 
         elif submission.post_hint == 'image':
+            postType = "image"
             command = tts.format(textCleaner(submission.title), "audio/" + "0" + ".mp3")
             os.system(command)   
             clock += audioLength(bodyCounter)                                                                                               
@@ -240,6 +243,7 @@ def getPageImage(submission): # prepares our post for a screenshot
             # if post is a link post, only dicatate title
         
     elif re.match("https://www.youtube.com/\S+", submission.url):
+        postType = "video"
         command = tts.format(textCleaner(submission.title), "audio/" + "0" + ".mp3")
         os.system(command)    
         clock += audioLength(bodyCounter)                                                                                           
@@ -282,15 +286,16 @@ def getPageImage(submission): # prepares our post for a screenshot
             clock += audioLength(bodyCounter)
             easySS()
 
-    BodyClockOb = [bodyCounter, clock, objectNames]
+    BodyClockObType = [bodyCounter, clock, objectNames, postType]
     '''
     - bodyCounter: int variable with the number of elements it has ss. so 4 would mean we took an ss of the title
       (0) and 4 paragraphs (1, 2, 3, 4)
     - clock: int variable which shows how long it takes the tts to speak aloud those elements
     - objectNames: list which contains how many elements have been ss. looks like, where each element is a string.
       so if 4 elements have been ss (title element and 4 paragraphs), it would look like ["0", "1", "2", "3", "4"]
+    - postType: str variable which tells us what type our post is, eitheir video, image, or text
     '''
-    return BodyClockOb
+    return BodyClockObType
 
 def generateMedia(comment, bodyCounter, parent, isChild): # generates audio and image for a comment object
     commentlink = "https://www.reddit.com" + comment.permalink
@@ -315,13 +320,12 @@ def generateMedia(comment, bodyCounter, parent, isChild): # generates audio and 
         im1 = imFilter(im1)
         add_corners(im1, rad = 30).save("image\\"+ str(parent) + ".png") # for logic reasons, round of the parent here, and not above
 
-def getComments(submission, BodyClockOb): # gets comments from submission
+def getComments(submission, BodyClockObType): # gets comments from submission
     chars = 600 # only comments which are <= 600 chars are used
-    clock = BodyClockOb[1]
-    objectNames = BodyClockOb[2]
+    clock = BodyClockObType[1]
 
     if clock < 59: # if the selftext was short, then we get enough comments to reach 60s
-        bodyCounter = BodyClockOb[0]
+        bodyCounter = BodyClockObType[0]
         long = False
         no = 0
         parent = bodyCounter
@@ -337,7 +341,7 @@ def getComments(submission, BodyClockOb): # gets comments from submission
             comment = allComments[no]
             generateMedia(comment, bodyCounter, parent, isChild = False)
             clock += audioLength(bodyCounter)   
-            objectNames.append(str(bodyCounter))
+            BodyClockObType[2].append(str(bodyCounter))
             no += 1
             if clock >= 59:
                 im1 = Image.open("image\\" + str(parent) + ".png")
@@ -347,13 +351,13 @@ def getComments(submission, BodyClockOb): # gets comments from submission
                 break
 
             allReps = [comment for comment in list(comment.replies) if len(textCleaner(comment.body)) <= chars]
-            if len(allReps) > 0: # if the parent comment has children
+            if (len(allReps) > 0) and (BodyClockObType[3] == "text"): # if the parent comment has children
                 bodyCounter += 1
                 comment2 = allReps[0] # for each child comment, up till [1] children...
                 generateMedia(comment2, bodyCounter, parent, isChild = True)
                 clock += audioLength(bodyCounter)   
                 parent += 1
-                objectNames.append(str(bodyCounter))
+                BodyClockObType[2].append(str(bodyCounter))
             else:
                 im1 = Image.open("image\\" + str(parent) + ".png")
                 im1 = imageOpt(im1)
@@ -364,17 +368,15 @@ def getComments(submission, BodyClockOb): # gets comments from submission
          long = True
          
     driver.quit()
-    ObjLong = [objectNames, long]
     '''
-    - objectNames: see above. if we ss comments, for each comment, this variable increased by 1
     - long: boolean which lets us know if we are over 60s. if False, then video will be 60s. if True, then video
       will be over 60s (mainly for posts from AITA/TIFU where the selftext is long and of importance, so we dont
       get any comments)
     '''
-    return ObjLong
+    return long # boolean which lets us know if we are over 60s. 
 
-def movieCreator(ObjLong): # for each commenet, combine .png and .mp3 into a video
-    objectNames = ObjLong[0]
+def movieCreator(BodyClockObType): # for each commenet, combine .png and .mp3 into a video
+    objectNames = BodyClockObType[2] # objectNames: see above. if we ss comments, for each comment, this variable increased by 1
     compositeList = []
     cum = 0 # cumlative time of clips
     for name in objectNames:
@@ -391,13 +393,14 @@ def movieCreator(ObjLong): # for each commenet, combine .png and .mp3 into a vid
     return compositeList # returns a list, where each element is a video clip object. this has the image of the
     # optimised image of the element, tts audio, and time at which clip should start and end before next one begins playing.
 
-def finalVideoTT(compositeList, submission, ObjLong): # creates the final video for tiktok
+def finalVideoTT(compositeList, submission, BodyClockObType, long): # creates the final video for tiktok
     finalList = [] # this will contain, in order, our final clip objects which have been optimised, which will then
     # be composited together to create the final video.
     timeList = [clip.duration for clip in compositeList]
     cum = sum(timeList) # cumaltive time of all our clips. usually not 60s even if long = False.
     link = "https://www.reddit.com" + submission.permalink
     submissionID = re.search('(?<=comments/)(\w+)', link).group(1)
+    postType = BodyClockObType[3]
 
     def hasAudio(file_path): # checks if downloaded video has audio
         command = ['ffprobe', '-show_streams', '-print_format', 'json', file_path]
@@ -406,6 +409,11 @@ def finalVideoTT(compositeList, submission, ObjLong): # creates the final video 
         streams = parsed['streams']
         audio_streams = list(filter((lambda x: x['codec_type'] == 'audio'), streams))
         return len(audio_streams) > 0
+
+    if postType == "video":
+        hasAudio = hasAudio("downloaded.mp4")
+    else:
+        hasAudio = False
 
     backTemp = VideoFileClip("backgroundVid/" + random.choice(os.listdir("backgroundVid/"))).without_audio()    
     if backTemp.duration >= cum:
@@ -429,13 +437,8 @@ def finalVideoTT(compositeList, submission, ObjLong): # creates the final video 
     elif musicTemp.duration < cum:
         music = musicTemp.volumex(0.10)
         music = afx.audio_loop(music, duration = cum)
-    if hasattr(submission, 'post_hint'): # no music if theres a video
-        if submission.post_hint == 'hosted:video':
-            if hasAudio("downloaded.mp4") == True:
-                music = musicTemp.volumex(0)
-    if re.match("https://www.youtube.com/\S+", submission.url):
-        if hasAudio == True:
-            music = musicTemp.volumex(0)
+    if hasAudio == True: # if video has audio, no music will be played
+        music = musicTemp.volumex(0)
     # loads a music clip from folder, and adjusts it for stuff
 
     background = back.set_audio(music)
@@ -443,45 +446,15 @@ def finalVideoTT(compositeList, submission, ObjLong): # creates the final video 
 
     finalList.append(background) # the first video is used as the background
 
-    if hasattr(submission, 'post_hint'):
-        if submission.post_hint == 'hosted:video': # if post is a video, will play video in background
-            userVidTemp = VideoFileClip("downloaded.mp4")
-            if userVidTemp.duration >= cum:
-                if hasAudio("downloaded.mp4") == True:
-                    userVid = userVidTemp.subclip(0, cum).volumex(0.3)
-                else:
-                    userVid = userVidTemp.subclip(0, cum)
-            elif userVidTemp.duration < cum: # loops the audio and video seperately, then combines
-                if hasAudio("downloaded.mp4") == True:
-                    audio = AudioFileClip("downloaded.mp4")
-                    audio = afx.audio_loop(audio, duration=cum)
-                    clip1 = VideoFileClip("downloaded.mp4")
-                    clip1 = vfx.loop(clip1, duration=cum)
-                    userVidTemp = clip1.set_audio(audio)
-                    userVid = userVidTemp.volumex(0.3)
-                else:
-                    userVid = vfx.loop(userVidTemp, duration=cum)
-            userVid = userVid.resize(width=600)
-            (w, h) = userVid.size
-            userVid = userVid.set_position(("center", 120))
-            finalList.append(userVid)
-
-        elif submission.post_hint == 'image': # if post is an image, will show image in background
-            userImTemp = ImageClip("downloaded.jpeg")
-            userImTemp = userImTemp.resize(width=600)
-            (w, h) = userImTemp.size
-            userIm = userImTemp.set_duration(cum).set_position(("center", 120))
-            finalList.append(userIm)
-
-    elif re.match("https://www.youtube.com/\S+", submission.url): # if the post is a youtube link, will play video
+    if postType == "video": # if post is a video, will play video in background
         userVidTemp = VideoFileClip("downloaded.mp4")
         if userVidTemp.duration >= cum:
-            if hasAudio("downloaded.mp4") == True:
+            if hasAudio == True:
                 userVid = userVidTemp.subclip(0, cum).volumex(0.3)
             else:
                 userVid = userVidTemp.subclip(0, cum)
-        elif userVidTemp.duration < cum:
-            if hasAudio("downloaded.mp4") == True:
+        elif userVidTemp.duration < cum: # loops the audio and video seperately, then combines
+            if hasAudio == True:
                 audio = AudioFileClip("downloaded.mp4")
                 audio = afx.audio_loop(audio, duration=cum)
                 clip1 = VideoFileClip("downloaded.mp4")
@@ -493,7 +466,14 @@ def finalVideoTT(compositeList, submission, ObjLong): # creates the final video 
         userVid = userVid.resize(width=600)
         (w, h) = userVid.size
         userVid = userVid.set_position(("center", 120))
-        finalList.append(userVid) 
+        finalList.append(userVid)
+
+    elif postType == "image": # if post is an image, will show image in background
+        userImTemp = ImageClip("downloaded.jpeg")
+        userImTemp = userImTemp.resize(width=600)
+        (w, h) = userImTemp.size
+        userIm = userImTemp.set_duration(cum).set_position(("center", 120))
+        finalList.append(userIm)
 
     elif str(submission.subreddit) == "anime": # if post is from r/anime or op, show a .gif (for fun)
         extenCheck = ".filler/" + random.choice(os.listdir(".filler/"))
@@ -508,46 +488,41 @@ def finalVideoTT(compositeList, submission, ObjLong): # creates the final video 
         elif clip.h > 1280:
             clip = clip.resize(height=1160).set_position(("center", "center"), relative=True)
 
-        if hasattr(submission, 'post_hint'): # if video or image, adjust comments for it
-            if (submission.post_hint == 'hosted:video') or (submission.post_hint == 'image'):
-                clip = clip.set_position(("center", 120 + h + 40)).set_opacity(0.50)
-                if clip.h > (1280 - 20 - (120 + h + 40)):
-                    clip = clip.set_position(("center", 1280 - 20 - clip.h))
-        elif re.match("https://www.youtube.com/\S+", submission.url):
+        if (postType == "video") or (postType == "image"): # if video or image, adjust comments for it
             clip = clip.set_position(("center", 120 + h + 40)).set_opacity(0.50)
             if clip.h > (1280 - 20 - (120 + h + 40)):
                 clip = clip.set_position(("center", 1280 - 20 - clip.h))
-
+                
         finalList.append(clip) # each video clip object is appended to a list
 
-    # set of code to create watermark which credits persons music i am using
-    image = Image.new("RGBA", (720, 60), (255, 255, 255, 0))
-    draw = ImageDraw.Draw(image)
-    font = ImageFont.truetype('calibrib.ttf', 20)
-    text = musicName.replace("9", '"').replace(".mp3", "")
-    leftMargin = 25 # due to tt trimming sides
-    top = 80 # can change freely
-    lines = textwrap.wrap(text, width=40)
-    textTop = 12
-    if len(lines) == 1:
-        textTop = textTop * 1.75
-    widthList = []
-    for line in lines:
-        line_width, line_height = font.getsize(line)
-        widthList.append(line_width)
-    widthList.sort(reverse=True)
-    draw.rounded_rectangle((-60, 0, leftMargin + 40 + 25 + widthList[0], 60), fill=(255, 255, 255, 217), radius=60)  
-    for line in lines:
-        draw.text((leftMargin + 40 + 5, textTop), line, font=font, fill=(0, 0, 0, 217))
-        textTop += line_height
-    image.save("watermark.png")
-    waterClip = ImageClip("watermark.png").set_start(0).set_duration(cum).set_pos(("left", top)).set_fps(1)
-    finalList.append(waterClip) # appends video vlip to a list
-    musicIcon = VideoFileClip("musicIcon.gif", has_mask=True).resize(height=40).loop().set_start(0).set_duration(cum).margin(left=leftMargin, opacity=0).set_pos((0, top + 10)).set_opacity(0.85)
-    finalList.append(musicIcon)
+    if hasAudio == False: # set of code to create watermark which credits persons music i am using
+        image = Image.new("RGBA", (720, 60), (255, 255, 255, 0))
+        draw = ImageDraw.Draw(image)
+        font = ImageFont.truetype('calibrib.ttf', 20)
+        text = musicName.replace("9", '"').replace(".mp3", "")
+        leftMargin = 25 # due to tt trimming sides
+        top = 80 # can change freely
+        lines = textwrap.wrap(text, width=40)
+        textTop = 12
+        if len(lines) == 1:
+            textTop = textTop * 1.75
+        widthList = []
+        for line in lines:
+            line_width, line_height = font.getsize(line)
+            widthList.append(line_width)
+        widthList.sort(reverse=True)
+        draw.rounded_rectangle((-60, 0, leftMargin + 40 + 25 + widthList[0], 60), fill=(255, 255, 255, 217), radius=60)  
+        for line in lines:
+            draw.text((leftMargin + 40 + 5, textTop), line, font=font, fill=(0, 0, 0, 217))
+            textTop += line_height
+        image.save("watermark.png")
+        waterClip = ImageClip("watermark.png").set_start(0).set_duration(cum).set_pos(("left", top)).set_fps(1)
+        finalList.append(waterClip) # appends video vlip to a list
+        finalList.insert(1, waterClip)
+        musicIcon = VideoFileClip("musicIcon.gif", has_mask=True).resize(height=40).loop().set_start(0).set_duration(cum).margin(left=leftMargin, opacity=0).set_pos((0, top + 10)).set_opacity(0.85)
+        finalList.insert(2, musicIcon)
 
     videoTemp = CompositeVideoClip(finalList) # compilies all video clip objects together to create final video
-    long = ObjLong[1]
     
     if (videoTemp.duration > 60) & (long == False): # extra logic which trims the video to 60s for tiktok is the selftext is short
         video = videoTemp.subclip(0, 59)
@@ -559,7 +534,7 @@ def finalVideoTT(compositeList, submission, ObjLong): # creates the final video 
     video.write_videofile("finalVid/" + submissionID + "_FinalVideoTT" + ".mp4")
 
 submission = getSubmissions()
-BodyClockOb = getPageImage(submission)
-ObjLong = getComments(submission, BodyClockOb)
-compositeList = movieCreator(ObjLong)
-finalVideoTT(compositeList, submission, ObjLong)
+BodyClockObType = getPageImage(submission)
+long = getComments(submission, BodyClockObType)
+compositeList = movieCreator(BodyClockObType)
+finalVideoTT(compositeList, submission, BodyClockObType, long)
