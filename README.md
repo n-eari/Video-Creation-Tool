@@ -3,10 +3,24 @@
 
 - Creates a 60s video from a reddit post via Web Scraping. With Text-To-Speech (TTS), dictates the title, selftext, and comments + replies to compile a short video with background gameplay and music for entertainment.
 
+## Libraies Used:
+- PRAW
+- Emoji
+- Textwrap
+- PyTube
+- Selenium
+- MoviePy
+- RedDownloader
+- PIL
+- Subprocess
+- Mutagen
+- PyTesseract
+
 ## How to use:
 - Download the required libraies.
 - The "client_secrets.json" file has not been provided for obvious reasons, hence you must create it youself. [Follow guide here.](https://www.geeksforgeeks.org/how-to-get-client_id-and-client_secret-for-python-reddit-api-registration/)
 - Ensure you have a .mp4 and .mp3 in the "backgroundVid" and "music" folder respectfully, aswell as the link for the reddit post you want to scrape.
+- The name of the .mp3 file will be shown in the top left, so ensure it is named appropriately (name, artist). 
 - Run the "main.py" script, and either copy/paste the reddit post link, or click enter to use the ones in the "links.txt file"
 - After a few minutes, the final video will be created in the "finalVid" folder.
 
@@ -20,7 +34,7 @@
 - Abilty to filter words from dictation, and replacing them with other words.
 - Can use your own custom background music and gameplay. Simply place them in the "music" and "backgroundVid" folder respectfully, and the script will choose one at random.
 - Final video is 720 x 1280 and 60s long. However the length can vary depending on how long the selftext is.
-- Addedd watermark in the top left to give credit to whose background music you are using by simply using the name of the music file.
+- Added watermark in the top left to give credit to whose background music you are using by simply using the name of the music file.
 - Also creates a supplementive .txt file, which contains information abou the video, such as the link author, and tags to use for social media. 
 
 ## Examples:
